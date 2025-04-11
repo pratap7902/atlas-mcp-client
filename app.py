@@ -1,10 +1,20 @@
 from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware  # Add this import
 from pydantic import BaseModel
 import uvicorn
 from typing import Optional
 from client import MCPClient
 
 app = FastAPI(title="MCP Chat API")
+
+# Add CORS middleware configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 class MCPClientManager:
     def __init__(self):
@@ -14,7 +24,7 @@ class MCPClientManager:
         if not self.client:
             self.client = MCPClient()
             # Initialize with your server script path
-            await self.client.connect_to_server("/Users/chandrapratap/atlas-mcp-server/mcp-server/mcp-server.py")
+            await self.client.connect_to_server("/Users/chandrapratap/atlas-mcp/mcp-server/mcp-server.py")
         return self.client
 
     async def cleanup(self):
@@ -50,8 +60,9 @@ async def chat(
 ):
     try:
         response = await client.process_query(request.query)
-        print(response)
-        return QueryResponse(response=response)
+        if isinstance(response, (list, tuple)):
+            response = "\n".join(str(item) for item in response)
+        return QueryResponse(response=str(response))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
